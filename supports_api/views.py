@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
+from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
 from .models import User, Project, Contributor, Issue, Comment
 from .serializers import (
@@ -231,10 +232,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         serializer = ContributorCreateSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(project=project)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            try:
+                serializer.save(project=project)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except IntegrityError:
+                return Response(
+                    {"error": "Ce contributeur existe déjà dans ce projet"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
+    
+    
+    
+""" Issue ViewSet """
 @extend_schema_view(
     list=extend_schema(
         summary="Lister les problèmes",
@@ -316,6 +327,9 @@ class IssueViewSet(viewsets.ModelViewSet):
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
 
+
+
+""" Comment ViewSet """
 @extend_schema_view(
     list=extend_schema(
         summary="Lister les commentaires",
@@ -363,6 +377,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticated, IsCommentAuthorOrReadOnly]
     pagination_class = StandardResultsSetPagination
+    lookup_field = 'uuid'
 
     def get_queryset(self):
         """Filtre les commentaires selon les projets de l'utilisateur"""
@@ -377,9 +392,15 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Crée le commentaire avec l'auteur"""
         serializer.save(author=self.request.user)
-
-    def retrieve(self, request, *args, **kwargs):
-        """Récupération d'un commentaire par UUID"""
-        comment = get_object_or_404(Comment, uuid=kwargs['pk'])
-        serializer = self.get_serializer(comment)
-        return Response(serializer.data)
+    
+    def get_object(self):
+        """Récupère un commentaire par UUID au lieu de l'ID par défaut"""
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        uuid_value = self.kwargs[lookup_url_kwarg]
+        
+        try:
+            return get_object_or_404(Comment, uuid=uuid_value)
+        except ValueError:
+            # Si l'UUID n'est pas valide, retourner une erreur 400
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(f"'{uuid_value}' n'est pas un UUID valide")
