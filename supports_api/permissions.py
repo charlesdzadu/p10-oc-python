@@ -95,4 +95,20 @@ class IsIssueAuthorOrReadOnly(permissions.BasePermission):
             ).exists()
         
         # Modification/suppression uniquement pour l'auteur de l'issue
-        return obj.author == request.user 
+        return obj.author == request.user
+
+class IsUserOwnerOrReadOnly(permissions.BasePermission):
+    """Permission pour les utilisateurs - lecture pour tous, modification uniquement pour le propriétaire"""
+    
+    def has_permission(self, request, view):
+        """Vérifie si l'utilisateur est authentifié"""
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        """Vérifie les permissions sur l'utilisateur"""
+        # Lecture autorisée pour tous les utilisateurs authentifiés
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # Modification/suppression uniquement pour le propriétaire du compte
+        return obj == request.user 

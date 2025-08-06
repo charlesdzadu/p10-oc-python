@@ -14,7 +14,8 @@ from .serializers import (
 )
 from .permissions import (
     IsProjectAuthorOrReadOnly,
-    IsIssueAuthorOrReadOnly, IsCommentAuthorOrReadOnly
+    IsIssueAuthorOrReadOnly, IsCommentAuthorOrReadOnly,
+    IsUserOwnerOrReadOnly
 )
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -55,17 +56,17 @@ class StandardResultsSetPagination(PageNumberPagination):
     ),
     update=extend_schema(
         summary="Modifier un utilisateur",
-        description="Modifie complètement un utilisateur.",
+        description="Modifie complètement un utilisateur (propriétaire uniquement).",
         tags=['users']
     ),
     partial_update=extend_schema(
         summary="Modifier partiellement un utilisateur",
-        description="Modifie partiellement un utilisateur.",
+        description="Modifie partiellement un utilisateur (propriétaire uniquement).",
         tags=['users']
     ),
     destroy=extend_schema(
         summary="Supprimer un utilisateur",
-        description="Supprime un utilisateur (droit à l'oubli RGPD).",
+        description="Supprime un utilisateur (propriétaire uniquement, droit à l'oubli RGPD).",
         tags=['users']
     )
 )
@@ -73,7 +74,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """Vue pour la gestion des utilisateurs avec RGPD"""
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsUserOwnerOrReadOnly]
     pagination_class = StandardResultsSetPagination
 
     def get_serializer_class(self):
@@ -90,14 +91,14 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Gérer le profil utilisateur",
-        description="Permet de consulter et modifier le profil utilisateur (RGPD).",
+        description="Permet de consulter et modifier le profil utilisateur (propriétaire uniquement, RGPD).",
         tags=['users'],
         methods=['GET'],
         responses={200: UserSerializer}
     )
     @extend_schema(
         summary="Modifier le profil utilisateur",
-        description="Modifie le profil utilisateur avec validation RGPD.",
+        description="Modifie le profil utilisateur avec validation RGPD (propriétaire uniquement).",
         tags=['users'],
         methods=['PUT', 'PATCH'],
         request=UserSerializer,
@@ -121,7 +122,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Supprimer le compte (droit à l'oubli)",
-        description="Supprime complètement le compte utilisateur selon le RGPD.",
+        description="Supprime complètement le compte utilisateur selon le RGPD (propriétaire uniquement).",
         tags=['users'],
         responses={204: None, 403: None}
     )
@@ -129,10 +130,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def delete_account(self, request, pk=None):
         """Droit à l'oubli (RGPD)"""
         user = self.get_object()
-        if user == request.user:
-            user.delete()
-            return Response({"message": "Compte supprimé avec succès"}, status=status.HTTP_204_NO_CONTENT)
-        return Response({"error": "Non autorisé"}, status=status.HTTP_403_FORBIDDEN)
+        user.delete()
+        return Response({"message": "Compte supprimé avec succès"}, status=status.HTTP_204_NO_CONTENT)
 
 
 
