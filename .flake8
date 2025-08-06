@@ -1,0 +1,63 @@
+[flake8]
+# Maximum line length
+max-line-length = 88
+
+# Exclude directories and files
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    .env,
+    migrations,
+    staticfiles,
+    media,
+    node_modules,
+    .tox,
+    .pytest_cache,
+    .coverage,
+    htmlcov,
+    dist,
+    build,
+    *.egg-info
+
+# Ignore specific error codes
+ignore = 
+    # whitespace before ':'
+    E203,
+    # line too long (handled by max-line-length)
+    E501,
+    # line break before binary operator
+    W503,
+    # line break after binary operator
+    W504,
+    # imported but unused (for __init__.py files)
+    F401,
+    # wildcard import
+    F403,
+    # name may be undefined, or defined from star imports
+    F405,
+    # do not use bare except
+    E722,
+    # do not assign a lambda expression, use a def
+    E731,
+
+# Show source code for each error
+show-source = True
+
+# Show statistics
+statistics = True
+
+# Count errors
+count = True
+
+# Output format
+format = %(path)s:%(row)d:%(col)d: %(code)s %(text)s
+
+# Per-file-ignores
+per-file-ignores =
+    # Ignore unused imports in __init__.py files
+    __init__.py:F401
+    # Ignore line length in migrations
+    */migrations/*:E501 

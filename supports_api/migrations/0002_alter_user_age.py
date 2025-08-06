@@ -14,6 +14,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='age',
-            field=models.PositiveIntegerField(blank=True, null=True, validators=[django.core.validators.MinValueValidator(15, "L'utilisateur doit avoir au moins 15 ans selon le RGPD")]),
+            field=models.PositiveIntegerField(
+                blank=True,
+                null=True,
+                validators=[
+                    django.core.validators.MinValueValidator(
+                        15,
+                        "L'utilisateur doit avoir au moins 15 ans selon le RGPD")]),
         ),
     ]

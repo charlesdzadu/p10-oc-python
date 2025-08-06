@@ -23,7 +23,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or "django-insecure-secret-key"
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY') or "django-insecure-secret-key"
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -155,7 +156,7 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'SoftDesk Support API',
     'DESCRIPTION': '''
     API RESTful pour la gestion de projets et de suivi de problèmes.
-    
+
     ## Fonctionnalités principales :
     - 🔐 Authentification JWT sécurisée
     - 👥 Gestion des utilisateurs avec RGPD

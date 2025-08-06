@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
 from .models import User, Project, Contributor, Issue, Comment
 from .serializers import (
-    UserSerializer, UserCreateSerializer, ProjectSerializer, 
+    UserSerializer, UserCreateSerializer, ProjectSerializer,
     ContributorSerializer, ContributorCreateSerializer,
     IssueSerializer, IssueCreateSerializer,
     CommentSerializer, CommentCreateSerializer
@@ -18,11 +18,13 @@ from .permissions import (
     IsUserOwnerOrReadOnly
 )
 
+
 class StandardResultsSetPagination(PageNumberPagination):
     """Pagination standard pour optimiser les performances (green code)"""
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -89,58 +91,60 @@ class UserViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return super().get_permissions()
 
-    @extend_schema(
-        summary="Gérer le profil utilisateur",
-        description="Permet de consulter et modifier le profil utilisateur (propriétaire uniquement, RGPD).",
-        tags=['users'],
-        methods=['GET'],
-        responses={200: UserSerializer}
-    )
+    @extend_schema(summary="Gérer le profil utilisateur",
+                   description="Permet de consulter et modifier le profil utilisateur (propriétaire uniquement, RGPD).",
+                   tags=['users'],
+                   methods=['GET'],
+                   responses={200: UserSerializer})
     @extend_schema(
         summary="Modifier le profil utilisateur",
         description="Modifie le profil utilisateur avec validation RGPD (propriétaire uniquement).",
         tags=['users'],
-        methods=['PUT', 'PATCH'],
+        methods=[
+            'PUT',
+            'PATCH'],
         request=UserSerializer,
-        responses={200: UserSerializer, 400: None}
-    )
+        responses={
+            200: UserSerializer,
+            400: None})
     @action(detail=True, methods=['get', 'put', 'patch'])
     def profile(self, request, pk=None):
         """Gestion du profil utilisateur (RGPD)"""
         user = self.get_object()
-        
+
         if request.method == 'GET':
             serializer = self.get_serializer(user)
             return Response(serializer.data)
-        
+
         elif request.method in ['PUT', 'PATCH']:
-            serializer = self.get_serializer(user, data=request.data, partial=True)
+            serializer = self.get_serializer(
+                user, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         summary="Supprimer le compte (droit à l'oubli)",
         description="Supprime complètement le compte utilisateur selon le RGPD (propriétaire uniquement).",
         tags=['users'],
-        responses={204: None, 403: None}
-    )
+        responses={
+            204: None,
+            403: None})
     @action(detail=True, methods=['delete'])
     def delete_account(self, request, pk=None):
         """Droit à l'oubli (RGPD)"""
         user = self.get_object()
         user.delete()
-        return Response({"message": "Compte supprimé avec succès"}, status=status.HTTP_204_NO_CONTENT)
-
-
-
-
-
-
+        return Response({"message": "Compte supprimé avec succès"},
+                        status=status.HTTP_204_NO_CONTENT)
 
 
 """ Project ViewSet """
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="Lister les projets",
@@ -187,12 +191,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
     """Vue pour la gestion des projets"""
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
-    permission_classes = [permissions.IsAuthenticated, IsProjectAuthorOrReadOnly]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsProjectAuthorOrReadOnly]
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         """Filtre les projets selon les contributeurs"""
-        return Project.objects.filter(contributors__user=self.request.user).distinct()
+        return Project.objects.filter(
+            contributors__user=self.request.user).distinct()
 
     def perform_create(self, serializer):
         """Crée le projet et ajoute l'auteur comme contributeur"""
@@ -224,27 +231,30 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def add_contributor(self, request, pk=None):
         """Ajouter un contributeur au projet"""
         project = self.get_object()
-        
+
         # Seul l'auteur peut ajouter des contributeurs
         if project.author != request.user:
-            return Response({"error": "Non autorisé"}, status=status.HTTP_403_FORBIDDEN)
-        
+            return Response({"error": "Non autorisé"},
+                            status=status.HTTP_403_FORBIDDEN)
+
         serializer = ContributorCreateSerializer(data=request.data)
         if serializer.is_valid():
             try:
                 serializer.save(project=project)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(
+                    serializer.data,
+                    status=status.HTTP_201_CREATED)
             except IntegrityError:
                 return Response(
-                    {"error": "Ce contributeur existe déjà dans ce projet"}, 
+                    {"error": "Ce contributeur existe déjà dans ce projet"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
-    
-    
+
+
 """ Issue ViewSet """
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="Lister les problèmes",
@@ -300,7 +310,8 @@ class IssueViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Filtre les issues selon les projets de l'utilisateur"""
-        return Issue.objects.filter(project__contributors__user=self.request.user).distinct()
+        return Issue.objects.filter(
+            project__contributors__user=self.request.user).distinct()
 
     def get_serializer_class(self):
         """Utilise le bon sérialiseur selon l'action"""
@@ -327,8 +338,9 @@ class IssueViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-
 """ Comment ViewSet """
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="Lister les commentaires",
@@ -374,13 +386,16 @@ class CommentViewSet(viewsets.ModelViewSet):
     """Vue pour la gestion des commentaires"""
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsCommentAuthorOrReadOnly]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsCommentAuthorOrReadOnly]
     pagination_class = StandardResultsSetPagination
     lookup_field = 'uuid'
 
     def get_queryset(self):
         """Filtre les commentaires selon les projets de l'utilisateur"""
-        return Comment.objects.filter(issue__project__contributors__user=self.request.user).distinct()
+        return Comment.objects.filter(
+            issue__project__contributors__user=self.request.user).distinct()
 
     def get_serializer_class(self):
         """Utilise le bon sérialiseur selon l'action"""
@@ -391,12 +406,12 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Crée le commentaire avec l'auteur"""
         serializer.save(author=self.request.user)
-    
+
     def get_object(self):
         """Récupère un commentaire par UUID au lieu de l'ID par défaut"""
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         uuid_value = self.kwargs[lookup_url_kwarg]
-        
+
         try:
             return get_object_or_404(Comment, uuid=uuid_value)
         except ValueError:

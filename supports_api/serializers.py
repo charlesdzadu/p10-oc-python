@@ -2,13 +2,14 @@ from rest_framework import serializers
 from .models import User, Project, Contributor, Issue, Comment
 from django.contrib.auth.password_validation import validate_password
 
+
 class UserSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les utilisateurs avec validation RGPD"""
-    
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'age', 'can_be_contacted', 
-                 'can_data_be_shared', 'created_time', 'updated_time']
+        fields = ['id', 'username', 'email', 'age', 'can_be_contacted',
+                  'can_data_be_shared', 'created_time', 'updated_time']
         read_only_fields = ['id', 'created_time', 'updated_time']
 
     def validate_age(self, value):
@@ -19,20 +20,23 @@ class UserSerializer(serializers.ModelSerializer):
             )
         return value
 
+
 class UserCreateSerializer(serializers.ModelSerializer):
     """Sérialiseur pour la création d'utilisateurs"""
-    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password = serializers.CharField(
+        write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
-    
+
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 
-                 'age', 'can_be_contacted', 'can_data_be_shared']
+        fields = ['username', 'email', 'password', 'password_confirm',
+                  'age', 'can_be_contacted', 'can_data_be_shared']
 
     def validate(self, attrs):
         """Validation des mots de passe"""
         if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError("Les mots de passe ne correspondent pas")
+            raise serializers.ValidationError(
+                "Les mots de passe ne correspondent pas")
         return attrs
 
     def create(self, validated_data):
@@ -41,35 +45,38 @@ class UserCreateSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
+
 class ProjectSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les projets"""
     author = UserSerializer(read_only=True)
     contributors_count = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description', 'type', 'author', 
-                 'contributors_count', 'created_time', 'updated_time']
+        fields = ['id', 'title', 'description', 'type', 'author',
+                  'contributors_count', 'created_time', 'updated_time']
         read_only_fields = ['id', 'author', 'created_time', 'updated_time']
 
     def get_contributors_count(self, obj):
         """Compte le nombre de contributeurs"""
         return obj.contributors.count()
 
+
 class ContributorSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les contributeurs"""
     user = UserSerializer(read_only=True)
     project = ProjectSerializer(read_only=True)
-    
+
     class Meta:
         model = Contributor
         fields = ['id', 'user', 'project', 'created_time']
         read_only_fields = ['id', 'created_time']
 
+
 class ContributorCreateSerializer(serializers.ModelSerializer):
     """Sérialiseur pour ajouter un contributeur"""
     user_id = serializers.IntegerField(write_only=True)
-    
+
     class Meta:
         model = Contributor
         fields = ['user_id', 'project']
@@ -89,32 +96,34 @@ class ContributorCreateSerializer(serializers.ModelSerializer):
         user = User.objects.get(id=user_id)
         return Contributor.objects.create(user=user, **validated_data)
 
+
 class IssueSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les problèmes"""
     author = UserSerializer(read_only=True)
     assigned_to = UserSerializer(read_only=True)
     project = ProjectSerializer(read_only=True)
     comments_count = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Issue
         fields = ['id', 'title', 'description', 'priority', 'status', 'tag',
-                 'project', 'author', 'assigned_to', 'comments_count',
-                 'created_time', 'updated_time']
+                  'project', 'author', 'assigned_to', 'comments_count',
+                  'created_time', 'updated_time']
         read_only_fields = ['id', 'author', 'created_time', 'updated_time']
 
     def get_comments_count(self, obj):
         """Compte le nombre de commentaires"""
         return obj.comments.count()
 
+
 class IssueCreateSerializer(serializers.ModelSerializer):
     """Sérialiseur pour la création de problèmes"""
     assigned_to_id = serializers.IntegerField(required=False, allow_null=True)
-    
+
     class Meta:
         model = Issue
         fields = ['title', 'description', 'priority', 'status', 'tag',
-                 'project', 'assigned_to_id']
+                  'project', 'assigned_to_id']
 
     def validate_assigned_to_id(self, value):
         """Validation que l'utilisateur assigné est un contributeur du projet"""
@@ -122,7 +131,8 @@ class IssueCreateSerializer(serializers.ModelSerializer):
             try:
                 user = User.objects.get(id=value)
                 project = self.context.get('project')
-                if project and not project.contributors.filter(user=user).exists():
+                if project and not project.contributors.filter(
+                        user=user).exists():
                     raise serializers.ValidationError(
                         "L'utilisateur assigné doit être un contributeur du projet"
                     )
@@ -130,20 +140,27 @@ class IssueCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Utilisateur introuvable")
         return value
 
+
 class CommentSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les commentaires"""
     author = UserSerializer(read_only=True)
     issue = IssueSerializer(read_only=True)
-    
+
     class Meta:
         model = Comment
         fields = ['id', 'uuid', 'description', 'issue', 'author',
-                 'created_time', 'updated_time']
-        read_only_fields = ['id', 'uuid', 'author', 'created_time', 'updated_time']
+                  'created_time', 'updated_time']
+        read_only_fields = [
+            'id',
+            'uuid',
+            'author',
+            'created_time',
+            'updated_time']
+
 
 class CommentCreateSerializer(serializers.ModelSerializer):
     """Sérialiseur pour la création de commentaires"""
-    
+
     class Meta:
         model = Comment
-        fields = ['description', 'issue'] 
+        fields = ['description', 'issue']
