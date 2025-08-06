@@ -1,5 +1,6 @@
 from rest_framework import permissions
-from .models import Project, Contributor
+
+from .models import Contributor, Project
 
 
 class IsProjectContributor(permissions.BasePermission):
@@ -11,18 +12,14 @@ class IsProjectContributor(permissions.BasePermission):
 
     def has_object_permission(self, request, _, obj):
         """Vérifie si l'utilisateur est contributeur du projet"""
-        if hasattr(obj, 'project'):
+        if hasattr(obj, "project"):
             # Pour les issues et comments
             return Contributor.objects.filter(
-                user=request.user,
-                project=obj.project
+                user=request.user, project=obj.project
             ).exists()
         elif isinstance(obj, Project):
             # Pour les projets
-            return Contributor.objects.filter(
-                user=request.user,
-                project=obj
-            ).exists()
+            return Contributor.objects.filter(user=request.user, project=obj).exists()
         return False
 
 
@@ -54,10 +51,7 @@ class IsProjectAuthorOrReadOnly(permissions.BasePermission):
         """Vérifie les permissions sur le projet"""
         # Lecture autorisée pour tous les contributeurs
         if request.method in permissions.SAFE_METHODS:
-            return Contributor.objects.filter(
-                user=request.user,
-                project=obj
-            ).exists()
+            return Contributor.objects.filter(user=request.user, project=obj).exists()
 
         # Modification/suppression uniquement pour l'auteur
         return obj.author == request.user
@@ -75,8 +69,7 @@ class IsCommentAuthorOrReadOnly(permissions.BasePermission):
         # Lecture autorisée pour tous les contributeurs du projet
         if request.method in permissions.SAFE_METHODS:
             return Contributor.objects.filter(
-                user=request.user,
-                project=obj.issue.project
+                user=request.user, project=obj.issue.project
             ).exists()
 
         # Modification/suppression uniquement pour l'auteur du commentaire
@@ -95,8 +88,7 @@ class IsIssueAuthorOrReadOnly(permissions.BasePermission):
         # Lecture autorisée pour tous les contributeurs du projet
         if request.method in permissions.SAFE_METHODS:
             return Contributor.objects.filter(
-                user=request.user,
-                project=obj.project
+                user=request.user, project=obj.project
             ).exists()
 
         # Modification/suppression uniquement pour l'auteur de l'issue

@@ -29,6 +29,22 @@ format:  ## Run all formatting tools (Black + isort)
 	@$(MAKE) black
 	@$(MAKE) isort
 
+pep8-report:  ## Generate a detailed PEP 8 compliance report
+	@echo "Generating PEP 8 compliance report..."
+	@echo "=== PEP 8 COMPLIANCE REPORT ===" > pep8_report.txt
+	@echo "Generated on: $$(date)" >> pep8_report.txt
+	@echo "" >> pep8_report.txt
+	@echo "=== SUMMARY ===" >> pep8_report.txt
+	@flake8 . --statistics >> pep8_report.txt 2>&1 || true
+	@echo "" >> pep8_report.txt
+	@echo "=== DETAILED VIOLATIONS ===" >> pep8_report.txt
+	@flake8 . --show-source >> pep8_report.txt 2>&1 || true
+	@echo "" >> pep8_report.txt
+	@echo "=== FILES WITH VIOLATIONS ===" >> pep8_report.txt
+	@flake8 . --format=%(path)s >> pep8_report.txt 2>&1 | sort | uniq >> pep8_report.txt 2>&1 || true
+	@echo "Report saved to: pep8_report.txt"
+	@echo "Total violations: $$(flake8 . --count 2>/dev/null || echo 0)"
+
 clean:  ## Clean up Python cache files
 	@echo "Cleaning up Python cache files..."
 	@find . -type f -name "*.pyc" -delete
